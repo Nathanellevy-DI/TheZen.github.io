@@ -5,5 +5,5 @@ import tailwindcss from '@tailwindcss/vite'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  base: '/', // GitHub Pages root domain
+  base: '/TheZen.github.io/', // GitHub Pages repo path
 })
