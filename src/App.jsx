@@ -2,23 +2,20 @@ import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ZenTimer } from './components/ZenTimer';
 import { TodoList } from './components/TodoList/TodoList';
+import { Calendar } from './components/Calendar/Calendar';
 import { FocusStats, useRecordSession } from './components/Stats/FocusStats';
 import { BreathingExercise } from './components/Breathing/BreathingExercise';
 import { BottomNav } from './components/Navigation/BottomNav';
 import './index.css';
 
-/**
- * Page transition variants
- */
 const pageVariants = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -20 },
+  initial: { opacity: 0, x: 20 },
+  animate: { opacity: 1, x: 0 },
+  exit: { opacity: 0, x: -20 },
 };
 
 /**
- * Main App - Fully responsive productivity suite
- * Works as website and PWA on any device
+ * Main App - Locked viewport, no unwanted scrolling
  */
 function App() {
   const [activeTab, setActiveTab] = useState('timer');
@@ -28,19 +25,23 @@ function App() {
     recordSession(durationSeconds);
   }, [recordSession]);
 
+  // Tabs that need scrolling
+  const scrollableTabs = ['tasks', 'calendar', 'stats'];
+  const needsScroll = scrollableTabs.includes(activeTab);
+
   return (
-    <div className="min-h-screen w-full bg-paper flex flex-col">
-      {/* Safe area spacer for iOS notch/dynamic island */}
+    <div className="h-full w-full bg-paper flex flex-col overflow-hidden">
+      {/* Safe area spacer for iOS notch */}
       <div className="pt-safe flex-shrink-0" />
 
-      {/* Main content area - scrollable */}
-      <main className="flex-1 overflow-y-auto overflow-x-hidden">
-        <div className="app-container min-h-full">
+      {/* Main content area */}
+      <main className={`flex-1 overflow-hidden ${needsScroll ? 'scrollable' : ''}`}>
+        <div className="app-container h-full">
           <AnimatePresence mode="wait">
             {activeTab === 'timer' && (
               <motion.div
                 key="timer"
-                className="min-h-[calc(100vh-120px)] flex items-center justify-center px-4"
+                className="h-full flex items-center justify-center px-4"
                 variants={pageVariants}
                 initial="initial"
                 animate="animate"
@@ -54,7 +55,7 @@ function App() {
             {activeTab === 'tasks' && (
               <motion.div
                 key="tasks"
-                className="min-h-full py-4 px-4"
+                className="py-4 px-4 pb-20"
                 variants={pageVariants}
                 initial="initial"
                 animate="animate"
@@ -65,10 +66,24 @@ function App() {
               </motion.div>
             )}
 
+            {activeTab === 'calendar' && (
+              <motion.div
+                key="calendar"
+                className="py-4 px-4 pb-20"
+                variants={pageVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              >
+                <Calendar />
+              </motion.div>
+            )}
+
             {activeTab === 'stats' && (
               <motion.div
                 key="stats"
-                className="min-h-full py-4 px-4"
+                className="py-4 px-4 pb-20"
                 variants={pageVariants}
                 initial="initial"
                 animate="animate"
@@ -82,7 +97,7 @@ function App() {
             {activeTab === 'breathe' && (
               <motion.div
                 key="breathe"
-                className="min-h-[calc(100vh-120px)] flex items-center justify-center px-4"
+                className="h-full flex items-center justify-center px-4"
                 variants={pageVariants}
                 initial="initial"
                 animate="animate"
@@ -96,7 +111,7 @@ function App() {
         </div>
       </main>
 
-      {/* Bottom Navigation with safe area */}
+      {/* Bottom Navigation */}
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
     </div>
   );

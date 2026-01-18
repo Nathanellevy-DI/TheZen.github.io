@@ -1,19 +1,16 @@
 import { useRef, useCallback, useState, useEffect } from 'react';
-import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
+import { motion, useMotionValue, useSpring } from 'framer-motion';
 import {
     getAngleFromCenter,
     angleToMinutes,
     snapToIncrement,
-    minutesToAngle,
     isOnCircleEdge,
     formatTime,
-    calculateVelocity
 } from '../../utils/math';
 import { RippleContainer, useRipples } from '../Feedback/Ripple';
 
 /**
  * Spring physics configuration
- * Firm but weighted feel - like handling a meditation stone
  */
 const SPRING_CONFIG = {
     stiffness: 300,
@@ -24,53 +21,46 @@ const SPRING_CONFIG = {
 
 /**
  * TimerCircle Component
- * The central draggable fluid circle that represents the timer
+ * Fixed touch handling for mobile - prevents accidental pauses
  */
 export function TimerCircle({
-    duration,          // Current duration in seconds
-    remaining,         // Remaining seconds (when running)
-    status,            // Timer status
-    onDurationChange,  // Callback when duration changes via radial drag
-    onDragStart,       // Callback when drag starts
-    onDragEnd,         // Callback when drag ends
-    onEnterDropZone,   // Callback when entering drop zone
-    onExitDropZone,    // Callback when exiting drop zone
-    onFlickCancel,     // Callback for flick-up cancel gesture
-    onLongPress,       // Callback for long press (settings)
-    onTap,             // Callback for tap (pause/resume/acknowledge)
+    duration,
+    remaining,
+    status,
+    onDurationChange,
+    onDragStart,
+    onDragEnd,
+    onEnterDropZone,
+    onExitDropZone,
+    onFlickCancel,
+    onLongPress,
+    onTap,
 }) {
-    const containerRef = useRef(null);
     const circleRef = useRef(null);
-    const { ripples, addRipple, clearRipples } = useRipples();
+    const { ripples, addRipple } = useRipples();
 
-    // Drag state
+    // Touch state
     const [isDragging, setIsDragging] = useState(false);
     const [isInDropZone, setIsInDropZone] = useState(false);
-    const dragStartRef = useRef({ x: 0, y: 0, time: 0 });
-    const lastMoveRef = useRef({ x: 0, y: 0, time: 0 });
-
-    // Long press detection
+    const touchStartRef = useRef({ x: 0, y: 0, time: 0 });
+    const hasMoved = useRef(false);
     const longPressTimerRef = useRef(null);
     const longPressTriggeredRef = useRef(false);
 
-    // Motion values for smooth animation
-    const x = useMotionValue(0);
-    const y = useMotionValue(0);
+    // Motion values
     const scale = useMotionValue(1);
-
-    // Spring-animated versions
-    const springX = useSpring(x, SPRING_CONFIG);
-    const springY = useSpring(y, SPRING_CONFIG);
+    const y = useMotionValue(0);
     const springScale = useSpring(scale, SPRING_CONFIG);
+    const springY = useSpring(y, SPRING_CONFIG);
 
-    // Progress for visual arc (0-1)
+    // Progress for visual arc
     const progress = duration > 0 ? remaining / duration : 0;
 
-    // Calculate circle dimensions
-    const circleSize = Math.min(280, window.innerWidth * 0.7);
+    // Circle dimensions
+    const circleSize = Math.min(260, window.innerWidth * 0.65);
     const radius = circleSize / 2;
 
-    // Get center of circle in viewport
+    // Get circle center
     const getCircleCenter = useCallback(() => {
         if (!circleRef.current) return { x: 0, y: 0 };
         const rect = circleRef.current.getBoundingClientRect();
@@ -80,39 +70,45 @@ export function TimerCircle({
         };
     }, []);
 
-    // Check if position is in drop zone (top 120px of screen)
-    const checkDropZone = useCallback((clientY) => {
-        return clientY < 120;
-    }, []);
+    // Check if in drop zone
+    const checkDropZone = useCallback((clientY) => clientY < 120, []);
 
-    // Handle touch/mouse start
-    const handlePointerDown = useCallback((e) => {
+    // Get touch/mouse position
+    const getEventPos = (e) => {
+        if (e.touches?.[0]) {
+            return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }
+        if (e.changedTouches?.[0]) {
+            return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+        }
+        return { x: e.clientX, y: e.clientY };
+    };
+
+    // Handle touch start
+    const handleTouchStart = useCallback((e) => {
         if (status === 'settings') return;
+        e.preventDefault(); // Prevent default to avoid double-firing
 
-        const touch = e.touches?.[0] || e;
-        const { clientX, clientY } = touch;
-
-        // Store start position for velocity calculation
-        dragStartRef.current = { x: clientX, y: clientY, time: Date.now() };
-        lastMoveRef.current = { x: clientX, y: clientY, time: Date.now() };
+        const pos = getEventPos(e);
+        touchStartRef.current = { x: pos.x, y: pos.y, time: Date.now() };
+        hasMoved.current = false;
         longPressTriggeredRef.current = false;
 
-        // Add ripple at touch point
+        // Add ripple
         const rect = circleRef.current?.getBoundingClientRect();
         if (rect) {
-            addRipple(clientX - rect.left, clientY - rect.top, 80);
+            addRipple(pos.x - rect.left, pos.y - rect.top, 80);
         }
 
         const center = getCircleCenter();
-        const onEdge = isOnCircleEdge(clientX, clientY, center.x, center.y, radius, 0.35);
+        const onEdge = isOnCircleEdge(pos.x, pos.y, center.x, center.y, radius, 0.35);
 
         if (onEdge && (status === 'idle' || status === 'adjusting')) {
-            // Edge drag for time adjustment
             setIsDragging(true);
             onDragStart?.();
             scale.set(1.02);
         } else if (status === 'idle') {
-            // Center touch - start long press timer
+            // Long press for settings
             longPressTimerRef.current = setTimeout(() => {
                 longPressTriggeredRef.current = true;
                 onLongPress?.();
@@ -120,39 +116,34 @@ export function TimerCircle({
         }
     }, [status, getCircleCenter, radius, addRipple, onDragStart, onLongPress, scale]);
 
-    // Handle touch/mouse move
-    const handlePointerMove = useCallback((e) => {
-        const touch = e.touches?.[0] || e;
-        const { clientX, clientY } = touch;
+    // Handle touch move
+    const handleTouchMove = useCallback((e) => {
+        const pos = getEventPos(e);
 
-        // Cancel long press if moved too much
-        const startDist = Math.sqrt(
-            Math.pow(clientX - dragStartRef.current.x, 2) +
-            Math.pow(clientY - dragStartRef.current.y, 2)
-        );
-        if (startDist > 10 && longPressTimerRef.current) {
-            clearTimeout(longPressTimerRef.current);
-            longPressTimerRef.current = null;
+        // Track movement
+        const dx = pos.x - touchStartRef.current.x;
+        const dy = pos.y - touchStartRef.current.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist > 10) {
+            hasMoved.current = true;
+            // Cancel long press
+            if (longPressTimerRef.current) {
+                clearTimeout(longPressTimerRef.current);
+                longPressTimerRef.current = null;
+            }
         }
 
         if (!isDragging) return;
 
         const center = getCircleCenter();
-
-        // Calculate new duration from angle
-        const angle = getAngleFromCenter(clientX, clientY, center.x, center.y);
+        const angle = getAngleFromCenter(pos.x, pos.y, center.x, center.y);
         const minutes = angleToMinutes(angle, 60);
         const snapped = snapToIncrement(minutes, 5);
-
-        // Ensure minimum 5 minutes
-        const finalMinutes = Math.max(5, snapped);
-        onDurationChange?.(finalMinutes);
-
-        // Track for velocity calculation
-        lastMoveRef.current = { x: clientX, y: clientY, time: Date.now() };
+        onDurationChange?.(Math.max(5, snapped));
 
         // Check drop zone
-        const inDropZone = checkDropZone(clientY);
+        const inDropZone = checkDropZone(pos.y);
         if (inDropZone !== isInDropZone) {
             setIsInDropZone(inDropZone);
             if (inDropZone) {
@@ -167,48 +158,47 @@ export function TimerCircle({
         }
     }, [isDragging, getCircleCenter, onDurationChange, checkDropZone, isInDropZone, onEnterDropZone, onExitDropZone, y, scale]);
 
-    // Handle touch/mouse end
-    const handlePointerUp = useCallback((e) => {
-        // Clear long press timer
+    // Handle touch end
+    const handleTouchEnd = useCallback((e) => {
+        // Clear long press
         if (longPressTimerRef.current) {
             clearTimeout(longPressTimerRef.current);
             longPressTimerRef.current = null;
         }
 
-        // Check for flick gesture (running state only)
-        if (status === 'running') {
-            const now = Date.now();
-            const deltaTime = now - lastMoveRef.current.time;
-            const deltaY = dragStartRef.current.y - (e.changedTouches?.[0]?.clientY || e.clientY);
-            const velocity = Math.abs(deltaY / deltaTime) * 1000;
+        const pos = getEventPos(e);
+        const dx = pos.x - touchStartRef.current.x;
+        const dy = pos.y - touchStartRef.current.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const elapsed = Date.now() - touchStartRef.current.time;
 
-            if (deltaY > 50 && velocity > 800) {
+        // Check for flick (running state only)
+        if (status === 'running' && dy < -50) {
+            const velocity = Math.abs(dy / elapsed) * 1000;
+            if (velocity > 800) {
                 onFlickCancel?.();
                 return;
             }
         }
 
-        // Handle tap for pause/resume/acknowledge
-        if (!isDragging && !longPressTriggeredRef.current) {
-            const moved = Math.sqrt(
-                Math.pow((e.changedTouches?.[0]?.clientX || e.clientX) - dragStartRef.current.x, 2) +
-                Math.pow((e.changedTouches?.[0]?.clientY || e.clientY) - dragStartRef.current.y, 2)
-            );
-            if (moved < 10) {
-                onTap?.();
-            }
-        }
-
+        // Handle drag end
         if (isDragging) {
             setIsDragging(false);
             scale.set(1);
             y.set(0);
             onDragEnd?.(isInDropZone);
             setIsInDropZone(false);
+            return;
+        }
+
+        // Tap detection - only if didn't move much and wasn't a long press
+        // Also require a minimum touch duration to avoid accidental taps
+        if (!hasMoved.current && !longPressTriggeredRef.current && dist < 15 && elapsed > 50 && elapsed < 300) {
+            onTap?.();
         }
     }, [status, isDragging, isInDropZone, onDragEnd, onFlickCancel, onTap, scale, y]);
 
-    // Cleanup on unmount
+    // Cleanup
     useEffect(() => {
         return () => {
             if (longPressTimerRef.current) {
@@ -217,7 +207,7 @@ export function TimerCircle({
         };
     }, []);
 
-    // Calculate arc path for progress display
+    // Progress arc
     const progressArc = useCallback(() => {
         if (status !== 'running' && status !== 'paused') return '';
 
@@ -226,21 +216,19 @@ export function TimerCircle({
         const cx = radius;
         const cy = radius;
 
-        const startX = cx;
-        const startY = cy - r;
-        const endX = cx + r * Math.sin(angle);
-        const endY = cy - r * Math.cos(angle);
-
-        const largeArc = angle > Math.PI ? 1 : 0;
-
         if (progress >= 1) {
             return `M ${cx} ${cy - r} A ${r} ${r} 0 1 1 ${cx - 0.001} ${cy - r}`;
         }
+        if (progress <= 0) return '';
 
-        return `M ${startX} ${startY} A ${r} ${r} 0 ${largeArc} 1 ${endX} ${endY}`;
+        const endX = cx + r * Math.sin(angle);
+        const endY = cy - r * Math.cos(angle);
+        const largeArc = angle > Math.PI ? 1 : 0;
+
+        return `M ${cx} ${cy - r} A ${r} ${r} 0 ${largeArc} 1 ${endX} ${endY}`;
     }, [progress, radius, status]);
 
-    // Duration arc for adjustment mode
+    // Duration arc
     const durationArc = useCallback(() => {
         if (status !== 'idle' && status !== 'adjusting' && status !== 'committing') return '';
 
@@ -250,39 +238,33 @@ export function TimerCircle({
         const cx = radius;
         const cy = radius;
 
-        const startX = cx;
-        const startY = cy - r;
-        const endX = cx + r * Math.sin(angle);
-        const endY = cy - r * Math.cos(angle);
-
-        const largeArc = angle > Math.PI ? 1 : 0;
-
         if (minutes >= 60) {
             return `M ${cx} ${cy - r} A ${r} ${r} 0 1 1 ${cx - 0.001} ${cy - r}`;
         }
 
-        return `M ${startX} ${startY} A ${r} ${r} 0 ${largeArc} 1 ${endX} ${endY}`;
+        const endX = cx + r * Math.sin(angle);
+        const endY = cy - r * Math.cos(angle);
+        const largeArc = angle > Math.PI ? 1 : 0;
+
+        return `M ${cx} ${cy - r} A ${r} ${r} 0 ${largeArc} 1 ${endX} ${endY}`;
     }, [duration, radius, status]);
 
-    // Format display time
     const displayTime = formatTime(status === 'running' || status === 'paused' ? remaining : duration);
     const displayMinutes = Math.ceil((status === 'running' || status === 'paused' ? remaining : duration) / 60);
 
     return (
         <div
-            ref={containerRef}
-            className="relative flex items-center justify-center"
+            className="relative flex items-center justify-center touch-none"
             style={{ width: circleSize, height: circleSize }}
         >
             <motion.div
                 ref={circleRef}
-                className="relative clay cursor-grab active:cursor-grabbing"
+                className="relative clay cursor-pointer select-none"
                 style={{
                     width: circleSize,
                     height: circleSize,
-                    x: springX,
-                    y: springY,
                     scale: springScale,
+                    y: springY,
                 }}
                 animate={{
                     boxShadow: status === 'running'
@@ -293,24 +275,22 @@ export function TimerCircle({
                         : undefined,
                 }}
                 transition={status === 'running' ? { duration: 2, repeat: Infinity, repeatType: 'reverse' } : undefined}
-                onTouchStart={handlePointerDown}
-                onTouchMove={handlePointerMove}
-                onTouchEnd={handlePointerUp}
-                onMouseDown={handlePointerDown}
-                onMouseMove={handlePointerMove}
-                onMouseUp={handlePointerUp}
-                onMouseLeave={handlePointerUp}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                onMouseDown={handleTouchStart}
+                onMouseMove={isDragging ? handleTouchMove : undefined}
+                onMouseUp={handleTouchEnd}
+                onMouseLeave={isDragging ? handleTouchEnd : undefined}
             >
-                {/* Ripple effects container */}
                 <RippleContainer ripples={ripples} />
 
                 {/* Progress/Duration Arc */}
                 <svg
-                    className="absolute inset-0 -rotate-0 pointer-events-none"
+                    className="absolute inset-0 pointer-events-none"
                     width={circleSize}
                     height={circleSize}
                 >
-                    {/* Background track */}
                     <circle
                         cx={radius}
                         cy={radius}
@@ -319,25 +299,19 @@ export function TimerCircle({
                         stroke="#E0E0E0"
                         strokeWidth="3"
                     />
-
-                    {/* Active arc */}
                     <motion.path
                         d={status === 'running' || status === 'paused' ? progressArc() : durationArc()}
                         fill="none"
                         stroke="#1A1A1A"
                         strokeWidth="4"
                         strokeLinecap="round"
-                        initial={{ pathLength: 0 }}
-                        animate={{ pathLength: 1 }}
-                        transition={{ duration: 0.3 }}
                     />
                 </svg>
 
                 {/* Center content */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    {/* Time display */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                     <motion.div
-                        className="timer-font text-5xl font-light text-ink"
+                        className="timer-font text-4xl font-light text-ink"
                         animate={{
                             opacity: status === 'completed' ? [1, 0.5, 1] : 1,
                         }}
@@ -346,34 +320,17 @@ export function TimerCircle({
                         {displayTime}
                     </motion.div>
 
-                    {/* Status label */}
-                    <motion.div
-                        className="text-xs text-ink-soft mt-2 uppercase tracking-widest"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                    >
-                        {status === 'idle' && 'drag edge to set'}
+                    <motion.div className="text-xs text-ink-soft mt-2 uppercase tracking-widest">
+                        {status === 'idle' && 'tap to start'}
                         {status === 'adjusting' && `${displayMinutes} min`}
                         {status === 'committing' && 'release to start'}
                         {status === 'running' && 'focusing'}
-                        {status === 'paused' && 'paused'}
-                        {status === 'completed' && 'complete'}
+                        {status === 'paused' && 'paused · tap to resume'}
+                        {status === 'completed' && 'complete!'}
                     </motion.div>
-
-                    {/* Gesture hints */}
-                    {status === 'running' && (
-                        <motion.div
-                            className="absolute bottom-8 text-xs text-stone-dark"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 0.5 }}
-                            transition={{ delay: 2 }}
-                        >
-                            flick up to cancel
-                        </motion.div>
-                    )}
                 </div>
 
-                {/* Edge indicator for drag affordance */}
+                {/* Edge indicator */}
                 {(status === 'idle' || status === 'adjusting') && (
                     <motion.div
                         className="absolute rounded-full border-2 border-dashed border-stone-dark pointer-events-none"
@@ -384,8 +341,7 @@ export function TimerCircle({
                             top: 10,
                         }}
                         animate={{
-                            opacity: isDragging ? 0.8 : 0.3,
-                            scale: isDragging ? 1.02 : 1,
+                            opacity: isDragging ? 0.8 : 0.2,
                         }}
                     />
                 )}
