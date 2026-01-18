@@ -15,7 +15,7 @@ const PRESETS = [5, 15, 25, 45, 60];
  * ZenTimer - Main orchestrator component
  * Fully responsive with proper spacing
  */
-export function ZenTimer({ onSessionComplete }) {
+export function ZenTimer({ onSessionComplete, onSessionStart }) {
     // Load settings from storage
     const [settings, setSettings] = useState(() => {
         const stored = getStorageItem('settings', null);
@@ -88,6 +88,9 @@ export function ZenTimer({ onSessionComplete }) {
     const handleTap = useCallback(() => {
         if (state.status === 'idle') {
             // Quick tap to start in idle mode
+            if (onSessionStart) {
+                onSessionStart(state.duration);
+            }
             actions.commit();
         } else if (state.status === 'running') {
             actions.pause();
@@ -96,7 +99,7 @@ export function ZenTimer({ onSessionComplete }) {
         } else if (state.status === 'completed') {
             actions.acknowledgeComplete();
         }
-    }, [state.status, actions]);
+    }, [state.status, state.duration, actions, onSessionStart]);
 
     // Handle settings change
     const handleSettingsChange = useCallback((newSettings) => {
@@ -188,8 +191,8 @@ export function ZenTimer({ onSessionComplete }) {
                                 key={mins}
                                 onClick={() => handlePresetSelect(mins)}
                                 className={`px-4 py-2 rounded-2xl text-sm font-medium transition-all ${currentMinutes === mins
-                                        ? 'bg-ink text-paper shadow-lg'
-                                        : 'bg-paper shadow-clay-soft text-ink hover:shadow-clay'
+                                    ? 'bg-ink text-paper shadow-lg'
+                                    : 'bg-paper shadow-clay-soft text-ink hover:shadow-clay'
                                     }`}
                                 whileTap={{ scale: 0.95 }}
                                 whileHover={{ scale: 1.05 }}

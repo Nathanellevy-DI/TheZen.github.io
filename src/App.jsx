@@ -4,7 +4,7 @@ import { ZenTimer } from './components/ZenTimer';
 import { TodoList } from './components/TodoList/TodoList';
 import { Notes } from './components/Notes/Notes';
 import { Calendar } from './components/Calendar/Calendar';
-import { FocusStats, useRecordSession } from './components/Stats/FocusStats';
+import { FocusStats, useRecordSession, useRecordStart } from './components/Stats/FocusStats';
 import { BreathingExercise } from './components/Breathing/BreathingExercise';
 import { BottomNav } from './components/Navigation/BottomNav';
 import './index.css';
@@ -18,10 +18,15 @@ const pageVariants = {
 function App() {
   const [activeTab, setActiveTab] = useState('timer');
   const recordSession = useRecordSession();
+  const recordStart = useRecordStart();
 
   const handleSessionComplete = useCallback((durationSeconds) => {
     recordSession(durationSeconds);
   }, [recordSession]);
+
+  const handleSessionStart = useCallback((durationSeconds) => {
+    recordStart(durationSeconds);
+  }, [recordStart]);
 
   const scrollableTabs = ['tasks', 'notes', 'calendar', 'stats'];
   const needsScroll = scrollableTabs.includes(activeTab);
@@ -35,7 +40,7 @@ function App() {
           <AnimatePresence mode="wait">
             {activeTab === 'timer' && (
               <motion.div key="timer" className="h-full flex items-center justify-center px-4" variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={{ type: 'spring', stiffness: 300, damping: 30 }}>
-                <ZenTimer onSessionComplete={handleSessionComplete} />
+                <ZenTimer onSessionComplete={handleSessionComplete} onSessionStart={handleSessionStart} />
               </motion.div>
             )}
 
