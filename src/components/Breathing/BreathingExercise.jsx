@@ -7,125 +7,96 @@ const PATTERNS = {
     energize: { inhale: 6, hold: 0, exhale: 2, holdOut: 0, name: 'Energy' },
 };
 
-/**
- * BreathingExercise - Fixed touch handling
- */
 export function BreathingExercise() {
     const [isActive, setIsActive] = useState(false);
     const [phase, setPhase] = useState('ready');
     const [pattern, setPattern] = useState('calm');
     const [cycleCount, setCycleCount] = useState(0);
-    const [scale, setScale] = useState(1);
+    const [circleScale, setCircleScale] = useState(1);
     const timerRef = useRef(null);
 
     const currentPattern = PATTERNS[pattern];
 
     const getPhaseText = () => {
-        switch (phase) {
-            case 'ready': return 'Tap to begin';
-            case 'inhale': return 'Breathe in';
-            case 'hold': return 'Hold';
-            case 'exhale': return 'Breathe out';
-            case 'holdOut': return 'Hold';
-            default: return '';
-        }
+        if (phase === 'ready') return 'TAP TO START';
+        if (phase === 'inhale') return 'BREATHE IN';
+        if (phase === 'hold') return 'HOLD';
+        if (phase === 'exhale') return 'BREATHE OUT';
+        return '';
     };
 
     const getPhaseDuration = useCallback(() => {
-        switch (phase) {
-            case 'inhale': return currentPattern.inhale;
-            case 'hold': return currentPattern.hold;
-            case 'exhale': return currentPattern.exhale;
-            case 'holdOut': return currentPattern.holdOut;
-            default: return 0;
-        }
+        if (phase === 'inhale') return currentPattern.inhale;
+        if (phase === 'hold') return currentPattern.hold;
+        if (phase === 'exhale') return currentPattern.exhale;
+        if (phase === 'holdOut') return currentPattern.holdOut;
+        return 0;
     }, [phase, currentPattern]);
 
-    const nextPhase = useCallback(() => {
+    const goToNextPhase = useCallback(() => {
         setPhase(current => {
-            switch (current) {
-                case 'ready':
-                    return 'inhale';
-                case 'holdOut':
-                    setCycleCount(c => c + 1);
-                    return 'inhale';
-                case 'inhale':
-                    return currentPattern.hold > 0 ? 'hold' : 'exhale';
-                case 'hold':
-                    return 'exhale';
-                case 'exhale':
-                    setCycleCount(c => c + 1);
-                    return currentPattern.holdOut > 0 ? 'holdOut' : 'inhale';
-                default:
-                    return 'inhale';
+            if (current === 'ready') return 'inhale';
+            if (current === 'inhale') return currentPattern.hold > 0 ? 'hold' : 'exhale';
+            if (current === 'hold') return 'exhale';
+            if (current === 'exhale') {
+                setCycleCount(c => c + 1);
+                return 'inhale';
             }
+            return 'inhale';
         });
     }, [currentPattern]);
 
-    // Phase timer
     useEffect(() => {
         if (!isActive || phase === 'ready') return;
 
-        const duration = getPhaseDuration();
+        if (phase === 'inhale') setCircleScale(1.5);
+        else if (phase === 'exhale') setCircleScale(1);
 
-        // Update scale
-        if (phase === 'inhale') {
-            setScale(1.4);
-        } else if (phase === 'exhale') {
-            setScale(1);
-        }
-
-        if (duration === 0) {
-            nextPhase();
+        const dur = getPhaseDuration();
+        if (dur === 0) {
+            goToNextPhase();
             return;
         }
 
-        timerRef.current = setTimeout(nextPhase, duration * 1000);
-        return () => {
-            if (timerRef.current) clearTimeout(timerRef.current);
-        };
-    }, [isActive, phase, getPhaseDuration, nextPhase]);
+        timerRef.current = setTimeout(goToNextPhase, dur * 1000);
+        return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+    }, [isActive, phase, getPhaseDuration, goToNextPhase]);
 
-    // Handle circle tap
-    const handleCircleTap = useCallback(() => {
+    const toggleBreathing = () => {
+        console.log('Toggle breathing, current isActive:', isActive);
         if (isActive) {
-            // Stop
             setIsActive(false);
             setPhase('ready');
-            setScale(1);
+            setCircleScale(1);
             setCycleCount(0);
             if (timerRef.current) clearTimeout(timerRef.current);
         } else {
-            // Start
             setIsActive(true);
             setPhase('inhale');
-            setCycleCount(0);
         }
-    }, [isActive]);
+    };
 
-    // Handle pattern change
-    const handlePatternChange = useCallback((key) => {
+    const selectPattern = (key) => {
         setPattern(key);
-        if (isActive) {
-            setIsActive(false);
-            setPhase('ready');
-            setScale(1);
-            setCycleCount(0);
-            if (timerRef.current) clearTimeout(timerRef.current);
-        }
-    }, [isActive]);
+        setIsActive(false);
+        setPhase('ready');
+        setCircleScale(1);
+        setCycleCount(0);
+        if (timerRef.current) clearTimeout(timerRef.current);
+    };
 
     return (
-        <div className="w-full max-w-sm mx-auto flex flex-col items-center">
-            {/* Pattern selector */}
-            <div className="flex gap-2 mb-10">
+        <div className="w-full max-w-sm mx-auto flex flex-col items-center py-4">
+            {/* Pattern buttons */}
+            <div className="flex gap-3 mb-10">
                 {Object.entries(PATTERNS).map(([key, p]) => (
                     <button
                         key={key}
-                        onClick={() => handlePatternChange(key)}
-                        className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${pattern === key
+                        type="button"
+                        onClick={() => selectPattern(key)}
+                        className={`px-5 py-2.5 rounded-2xl text-sm font-medium transition-colors ${pattern === key
                                 ? 'bg-ink text-paper'
-                                : 'bg-stone text-ink active:bg-stone-dark'
+                                : 'bg-stone text-ink'
                             }`}
                     >
                         {p.name}
@@ -133,67 +104,50 @@ export function BreathingExercise() {
                 ))}
             </div>
 
-            {/* Breathing circle */}
-            <div className="relative w-56 h-56 flex items-center justify-center">
-                {/* Outer ring */}
+            {/* Main breathing circle - USING BUTTON */}
+            <button
+                type="button"
+                onClick={toggleBreathing}
+                className="relative w-52 h-52 flex items-center justify-center focus:outline-none"
+                style={{ touchAction: 'manipulation' }}
+            >
+                {/* Animated circle wrapper */}
                 <motion.div
-                    className="absolute inset-0 rounded-full border-4 border-stone"
-                    animate={{
-                        opacity: isActive ? [0.2, 0.4, 0.2] : 0.2,
-                        scale: isActive ? [1, 1.05, 1] : 1,
-                    }}
-                    transition={{
-                        duration: 4,
-                        repeat: Infinity,
-                        ease: 'easeInOut',
-                    }}
-                />
-
-                {/* Main circle - using onClick for better compatibility */}
-                <motion.div
-                    onClick={handleCircleTap}
-                    className="w-44 h-44 rounded-full bg-paper shadow-clay flex flex-col items-center justify-center cursor-pointer active:shadow-clay-pressed"
-                    animate={{ scale }}
+                    className="absolute inset-0 rounded-full bg-paper flex items-center justify-center"
+                    animate={{ scale: circleScale }}
                     transition={{
                         duration: getPhaseDuration() || 0.3,
                         ease: phase === 'inhale' ? 'easeOut' : 'easeIn',
                     }}
-                    style={{ touchAction: 'manipulation' }}
+                    style={{
+                        boxShadow: '8px 8px 16px rgba(0,0,0,0.08), -8px -8px 16px rgba(255,255,255,0.9), inset 2px 2px 4px rgba(255,255,255,0.5), inset -2px -2px 4px rgba(0,0,0,0.05)',
+                    }}
                 >
-                    <motion.span
-                        className="text-lg font-light text-ink text-center"
-                        key={phase}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.2 }}
-                    >
-                        {getPhaseText()}
-                    </motion.span>
-
-                    {isActive && getPhaseDuration() > 0 && (
-                        <span className="text-2xl font-light text-ink mt-1 timer-font">
-                            {getPhaseDuration()}s
+                    <div className="flex flex-col items-center justify-center">
+                        <span className="text-base font-medium text-ink tracking-wide">
+                            {getPhaseText()}
                         </span>
-                    )}
+                        {isActive && getPhaseDuration() > 0 && (
+                            <span className="text-3xl font-light text-ink mt-2 timer-font">
+                                {getPhaseDuration()}s
+                            </span>
+                        )}
+                    </div>
                 </motion.div>
-            </div>
+            </button>
 
             {/* Cycle counter */}
             {cycleCount > 0 && (
-                <motion.div
-                    className="mt-8 text-center"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                >
-                    <p className="text-2xl font-light text-ink">{cycleCount}</p>
+                <div className="mt-10 text-center">
+                    <p className="text-3xl font-light text-ink">{cycleCount}</p>
                     <p className="text-sm text-stone-dark">cycles</p>
-                </motion.div>
+                </div>
             )}
 
-            {/* Instructions */}
-            <div className="mt-8 text-center text-xs text-stone-dark">
-                {isActive ? 'tap circle to stop' : 'follow the expanding circle'}
-            </div>
+            {/* Hint */}
+            <p className="mt-8 text-sm text-stone-dark">
+                {isActive ? 'Tap to stop' : 'Tap the circle to start breathing'}
+            </p>
         </div>
     );
 }
