@@ -4,7 +4,7 @@
  */
 
 const STORAGE_PREFIX = 'zen_timer_';
-const MAX_VALUE_LENGTH = 1000; // Prevent storage quota attacks
+const MAX_VALUE_LENGTH = 50000; // Allow larger data for todos, calendar, stats
 
 /**
  * Validate and sanitize storage key
