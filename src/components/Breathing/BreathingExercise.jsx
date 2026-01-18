@@ -1,25 +1,22 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 
-/**
- * Breathing patterns
- */
 const PATTERNS = {
-    calm: { inhale: 4, hold: 4, exhale: 4, holdOut: 0, name: 'Box Breathing' },
-    relaxed: { inhale: 4, hold: 7, exhale: 8, holdOut: 0, name: '4-7-8 Relaxing' },
-    energize: { inhale: 6, hold: 0, exhale: 2, holdOut: 0, name: 'Energizing' },
+    calm: { inhale: 4, hold: 4, exhale: 4, holdOut: 0, name: 'Box' },
+    relaxed: { inhale: 4, hold: 7, exhale: 8, holdOut: 0, name: '4-7-8' },
+    energize: { inhale: 6, hold: 0, exhale: 2, holdOut: 0, name: 'Energy' },
 };
 
 /**
- * BreathingExercise - Guided breathing visualization
- * Responsive layout that fits any screen
+ * BreathingExercise - Fixed touch handling
  */
 export function BreathingExercise() {
     const [isActive, setIsActive] = useState(false);
-    const [phase, setPhase] = useState('ready'); // ready, inhale, hold, exhale, holdOut
+    const [phase, setPhase] = useState('ready');
     const [pattern, setPattern] = useState('calm');
     const [cycleCount, setCycleCount] = useState(0);
     const [scale, setScale] = useState(1);
+    const timerRef = useRef(null);
 
     const currentPattern = PATTERNS[pattern];
 
@@ -34,7 +31,7 @@ export function BreathingExercise() {
         }
     };
 
-    const getPhaseDuration = () => {
+    const getPhaseDuration = useCallback(() => {
         switch (phase) {
             case 'inhale': return currentPattern.inhale;
             case 'hold': return currentPattern.hold;
@@ -42,20 +39,22 @@ export function BreathingExercise() {
             case 'holdOut': return currentPattern.holdOut;
             default: return 0;
         }
-    };
+    }, [phase, currentPattern]);
 
     const nextPhase = useCallback(() => {
         setPhase(current => {
             switch (current) {
                 case 'ready':
+                    return 'inhale';
                 case 'holdOut':
-                    setCycleCount(c => c + (current === 'holdOut' ? 1 : 0));
+                    setCycleCount(c => c + 1);
                     return 'inhale';
                 case 'inhale':
                     return currentPattern.hold > 0 ? 'hold' : 'exhale';
                 case 'hold':
                     return 'exhale';
                 case 'exhale':
+                    setCycleCount(c => c + 1);
                     return currentPattern.holdOut > 0 ? 'holdOut' : 'inhale';
                 default:
                     return 'inhale';
@@ -63,56 +62,70 @@ export function BreathingExercise() {
         });
     }, [currentPattern]);
 
+    // Phase timer
     useEffect(() => {
         if (!isActive || phase === 'ready') return;
 
         const duration = getPhaseDuration();
+
+        // Update scale
+        if (phase === 'inhale') {
+            setScale(1.4);
+        } else if (phase === 'exhale') {
+            setScale(1);
+        }
+
         if (duration === 0) {
             nextPhase();
             return;
         }
 
-        // Update scale based on phase
-        if (phase === 'inhale') {
-            setScale(1.5);
-        } else if (phase === 'exhale') {
+        timerRef.current = setTimeout(nextPhase, duration * 1000);
+        return () => {
+            if (timerRef.current) clearTimeout(timerRef.current);
+        };
+    }, [isActive, phase, getPhaseDuration, nextPhase]);
+
+    // Handle circle tap
+    const handleCircleTap = useCallback(() => {
+        if (isActive) {
+            // Stop
+            setIsActive(false);
+            setPhase('ready');
             setScale(1);
+            setCycleCount(0);
+            if (timerRef.current) clearTimeout(timerRef.current);
+        } else {
+            // Start
+            setIsActive(true);
+            setPhase('inhale');
+            setCycleCount(0);
         }
+    }, [isActive]);
 
-        const timer = setTimeout(nextPhase, duration * 1000);
-        return () => clearTimeout(timer);
-    }, [isActive, phase, nextPhase]);
-
-    const handleStart = () => {
+    // Handle pattern change
+    const handlePatternChange = useCallback((key) => {
+        setPattern(key);
         if (isActive) {
             setIsActive(false);
             setPhase('ready');
             setScale(1);
             setCycleCount(0);
-        } else {
-            setIsActive(true);
-            setPhase('inhale');
+            if (timerRef.current) clearTimeout(timerRef.current);
         }
-    };
+    }, [isActive]);
 
     return (
-        <div className="w-full max-w-md mx-auto flex flex-col items-center py-8">
+        <div className="w-full max-w-sm mx-auto flex flex-col items-center">
             {/* Pattern selector */}
-            <div className="flex flex-wrap justify-center gap-2 mb-12 px-4">
+            <div className="flex gap-2 mb-10">
                 {Object.entries(PATTERNS).map(([key, p]) => (
                     <button
                         key={key}
-                        onClick={() => {
-                            setPattern(key);
-                            if (isActive) {
-                                setIsActive(false);
-                                setPhase('ready');
-                                setScale(1);
-                            }
-                        }}
-                        className={`px-4 py-2 rounded-xl text-sm transition-all ${pattern === key
+                        onClick={() => handlePatternChange(key)}
+                        className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${pattern === key
                                 ? 'bg-ink text-paper'
-                                : 'bg-stone text-ink hover:bg-stone-dark'
+                                : 'bg-stone text-ink active:bg-stone-dark'
                             }`}
                     >
                         {p.name}
@@ -121,12 +134,13 @@ export function BreathingExercise() {
             </div>
 
             {/* Breathing circle */}
-            <div className="relative w-64 h-64 flex items-center justify-center">
-                {/* Outer ring animation */}
+            <div className="relative w-56 h-56 flex items-center justify-center">
+                {/* Outer ring */}
                 <motion.div
-                    className="absolute inset-0 rounded-full border-4 border-stone opacity-30"
+                    className="absolute inset-0 rounded-full border-4 border-stone"
                     animate={{
-                        scale: isActive ? [1, 1.1, 1] : 1,
+                        opacity: isActive ? [0.2, 0.4, 0.2] : 0.2,
+                        scale: isActive ? [1, 1.05, 1] : 1,
                     }}
                     transition={{
                         duration: 4,
@@ -135,38 +149,33 @@ export function BreathingExercise() {
                     }}
                 />
 
-                {/* Main circle */}
-                <motion.button
-                    onClick={handleStart}
-                    className="w-48 h-48 rounded-full bg-paper shadow-clay flex flex-col items-center justify-center cursor-pointer"
-                    animate={{
-                        scale: scale,
-                    }}
+                {/* Main circle - using onClick for better compatibility */}
+                <motion.div
+                    onClick={handleCircleTap}
+                    className="w-44 h-44 rounded-full bg-paper shadow-clay flex flex-col items-center justify-center cursor-pointer active:shadow-clay-pressed"
+                    animate={{ scale }}
                     transition={{
                         duration: getPhaseDuration() || 0.3,
                         ease: phase === 'inhale' ? 'easeOut' : 'easeIn',
                     }}
-                    whileTap={{ scale: scale * 0.98 }}
+                    style={{ touchAction: 'manipulation' }}
                 >
                     <motion.span
-                        className="text-xl font-light text-ink text-center px-4"
+                        className="text-lg font-light text-ink text-center"
                         key={phase}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3 }}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.2 }}
                     >
                         {getPhaseText()}
                     </motion.span>
 
                     {isActive && getPhaseDuration() > 0 && (
-                        <motion.span
-                            className="text-3xl font-light text-ink mt-2 timer-font"
-                            key={`${phase}-${getPhaseDuration()}`}
-                        >
+                        <span className="text-2xl font-light text-ink mt-1 timer-font">
                             {getPhaseDuration()}s
-                        </motion.span>
+                        </span>
                     )}
-                </motion.button>
+                </motion.div>
             </div>
 
             {/* Cycle counter */}
@@ -182,14 +191,9 @@ export function BreathingExercise() {
             )}
 
             {/* Instructions */}
-            <motion.div
-                className="mt-8 text-center text-xs text-stone-dark px-4"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 0.5 }}
-                transition={{ delay: 2 }}
-            >
-                {isActive ? 'tap to stop' : 'follow the circle as it expands and contracts'}
-            </motion.div>
+            <div className="mt-8 text-center text-xs text-stone-dark">
+                {isActive ? 'tap circle to stop' : 'follow the expanding circle'}
+            </div>
         </div>
     );
 }
