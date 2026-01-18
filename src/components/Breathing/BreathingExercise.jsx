@@ -12,6 +12,7 @@ const PATTERNS = {
 
 /**
  * BreathingExercise - Guided breathing visualization
+ * Responsive layout that fits any screen
  */
 export function BreathingExercise() {
     const [isActive, setIsActive] = useState(false);
@@ -95,9 +96,9 @@ export function BreathingExercise() {
     };
 
     return (
-        <div className="w-full max-w-md mx-auto p-4 flex flex-col items-center justify-center min-h-[calc(100vh-120px)]">
+        <div className="w-full max-w-md mx-auto flex flex-col items-center py-8">
             {/* Pattern selector */}
-            <div className="flex gap-2 mb-12">
+            <div className="flex flex-wrap justify-center gap-2 mb-12 px-4">
                 {Object.entries(PATTERNS).map(([key, p]) => (
                     <button
                         key={key}
@@ -148,7 +149,7 @@ export function BreathingExercise() {
                     whileTap={{ scale: scale * 0.98 }}
                 >
                     <motion.span
-                        className="text-xl font-light text-ink"
+                        className="text-xl font-light text-ink text-center px-4"
                         key={phase}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -182,7 +183,7 @@ export function BreathingExercise() {
 
             {/* Instructions */}
             <motion.div
-                className="absolute bottom-24 text-center text-xs text-stone-dark"
+                className="mt-8 text-center text-xs text-stone-dark px-4"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 0.5 }}
                 transition={{ delay: 2 }}

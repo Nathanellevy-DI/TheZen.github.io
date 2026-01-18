@@ -13,7 +13,7 @@ const PRESETS = [5, 15, 25, 45, 60];
 
 /**
  * ZenTimer - Main orchestrator component
- * Now with quick preset buttons for easier time setting
+ * Fully responsive with proper spacing
  */
 export function ZenTimer({ onSessionComplete }) {
     // Load settings from storage
@@ -160,10 +160,10 @@ export function ZenTimer({ onSessionComplete }) {
     const showPresets = state.status === 'idle';
 
     return (
-        <div className="relative w-full h-full flex flex-col items-center justify-center bg-paper overflow-hidden">
+        <div className="relative w-full max-w-md mx-auto flex flex-col items-center py-8">
             {/* Subtle background pattern */}
             <div
-                className="absolute inset-0 opacity-30 pointer-events-none"
+                className="fixed inset-0 opacity-30 pointer-events-none"
                 style={{
                     backgroundImage: `radial-gradient(circle at 2px 2px, #E0E0E0 1px, transparent 0)`,
                     backgroundSize: '32px 32px',
@@ -177,7 +177,7 @@ export function ZenTimer({ onSessionComplete }) {
             <AnimatePresence>
                 {showPresets && (
                     <motion.div
-                        className="absolute top-20 left-0 right-0 flex justify-center gap-3 px-4"
+                        className="flex flex-wrap justify-center gap-2 mb-8 px-4"
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
@@ -202,25 +202,27 @@ export function ZenTimer({ onSessionComplete }) {
             </AnimatePresence>
 
             {/* Main Timer Circle */}
-            <TimerCircle
-                duration={state.duration}
-                remaining={state.remaining}
-                status={state.status}
-                onDurationChange={handleDurationChange}
-                onDragStart={handleDragStart}
-                onDragEnd={handleDragEnd}
-                onEnterDropZone={handleEnterDropZone}
-                onExitDropZone={handleExitDropZone}
-                onFlickCancel={handleFlickCancel}
-                onLongPress={handleLongPress}
-                onTap={handleTap}
-            />
+            <div className="relative z-10">
+                <TimerCircle
+                    duration={state.duration}
+                    remaining={state.remaining}
+                    status={state.status}
+                    onDurationChange={handleDurationChange}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                    onEnterDropZone={handleEnterDropZone}
+                    onExitDropZone={handleExitDropZone}
+                    onFlickCancel={handleFlickCancel}
+                    onLongPress={handleLongPress}
+                    onTap={handleTap}
+                />
+            </div>
 
             {/* Status indicator */}
             <AnimatePresence>
                 {state.status === 'idle' && (
                     <motion.div
-                        className="absolute bottom-32 text-sm text-ink-soft text-center"
+                        className="mt-8 text-sm text-ink-soft text-center"
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 0.6, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
@@ -231,7 +233,7 @@ export function ZenTimer({ onSessionComplete }) {
                 )}
                 {state.status === 'running' && (
                     <motion.div
-                        className="absolute bottom-32 text-sm text-ink-soft"
+                        className="mt-8 text-sm text-ink-soft"
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 0.6, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
@@ -241,7 +243,7 @@ export function ZenTimer({ onSessionComplete }) {
                 )}
                 {state.status === 'paused' && (
                     <motion.div
-                        className="absolute bottom-32 text-sm text-ink-soft"
+                        className="mt-8 text-sm text-ink-soft"
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 0.6, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
