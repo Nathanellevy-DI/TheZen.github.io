@@ -7,6 +7,8 @@ import { Calendar } from './components/Calendar/Calendar';
 import { FocusStats, useRecordSession, useRecordStart } from './components/Stats/FocusStats';
 import { BreathingExercise } from './components/Breathing/BreathingExercise';
 import { BottomNav } from './components/Navigation/BottomNav';
+import { ThemeProvider } from './context/ThemeContext';
+import { ThemeToggle } from './components/ThemeToggle/ThemeToggle';
 import './index.css';
 
 const pageVariants = {
@@ -15,7 +17,7 @@ const pageVariants = {
   exit: { opacity: 0, x: -20 },
 };
 
-function App() {
+function AppContent() {
   const [activeTab, setActiveTab] = useState('timer');
   const recordSession = useRecordSession();
   const recordStart = useRecordStart();
@@ -32,8 +34,11 @@ function App() {
   const needsScroll = scrollableTabs.includes(activeTab);
 
   return (
-    <div className="h-full w-full bg-paper flex flex-col overflow-hidden">
-      <div className="pt-safe flex-shrink-0" />
+    <div className="h-full w-full flex flex-col overflow-hidden" style={{ backgroundColor: 'var(--theme-paper)' }}>
+      {/* Top bar with theme toggle */}
+      <div className="pt-safe flex-shrink-0 flex justify-end items-center px-4 py-2">
+        <ThemeToggle />
+      </div>
 
       <main className={`flex-1 overflow-hidden ${needsScroll ? 'scrollable' : ''}`}>
         <div className="app-container h-full">
@@ -79,6 +84,14 @@ function App() {
 
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
     </div>
+  );
+}
+
+function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
   );
 }
 
