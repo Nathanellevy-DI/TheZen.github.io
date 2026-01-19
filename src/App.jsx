@@ -34,7 +34,10 @@ function AppContent() {
   const needsScroll = scrollableTabs.includes(activeTab);
 
   return (
-    <div className="h-full w-full flex flex-col overflow-hidden" style={{ backgroundColor: 'var(--theme-paper)' }}>
+    <div
+      className="h-full w-full flex flex-col overflow-hidden transition-colors duration-300"
+      style={{ backgroundColor: 'var(--theme-paper)', color: 'var(--theme-ink)' }}
+    >
       {/* Top bar with theme toggle */}
       <div className="pt-safe flex-shrink-0 flex justify-end items-center px-4 py-2">
         <ThemeToggle />

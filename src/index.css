@@ -1,37 +1,59 @@
 @import "tailwindcss";
 
 /* ═══════════════════════════════════════════════════════════════════════
-   ZEN FOCUS TIMER — Custom Theme & Claymorphism
+   ZEN FOCUS TIMER — Custom Theme & Claymorphism with Dark Mode
    ═══════════════════════════════════════════════════════════════════════ */
 
-@theme {
+/* CSS Variables that change with dark mode */
+:root {
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+
   /* Light mode colors */
-  --color-paper: #F4F4F4;
-  --color-stone: #E0E0E0;
-  --color-stone-dark: #C4C4C4;
-  --color-ink: #1A1A1A;
-  --color-ink-soft: #3A3A3A;
+  --theme-paper: #F4F4F4;
+  --theme-stone: #E0E0E0;
+  --theme-stone-dark: #C4C4C4;
+  --theme-ink: #1A1A1A;
+  --theme-ink-soft: #3A3A3A;
 
   /* Light mode shadows */
-  --shadow-clay:
+  --theme-shadow-clay:
     8px 8px 16px rgba(0, 0, 0, 0.08),
-    -8px -8px 16px rgba(255, 255, 255, 0.9),
-    inset 2px 2px 4px rgba(255, 255, 255, 0.5),
-    inset -2px -2px 4px rgba(0, 0, 0, 0.05);
-
-  --shadow-clay-pressed:
-    inset 4px 4px 8px rgba(0, 0, 0, 0.1),
-    inset -4px -4px 8px rgba(255, 255, 255, 0.7);
-
-  --shadow-clay-soft:
+    -8px -8px 16px rgba(255, 255, 255, 0.9);
+  --theme-shadow-soft:
     4px 4px 8px rgba(0, 0, 0, 0.05),
     -4px -4px 8px rgba(255, 255, 255, 0.8);
+}
 
-  --shadow-clay-hover:
-    12px 12px 24px rgba(0, 0, 0, 0.1),
-    -12px -12px 24px rgba(255, 255, 255, 0.95),
-    inset 2px 2px 4px rgba(255, 255, 255, 0.6),
-    inset -2px -2px 4px rgba(0, 0, 0, 0.03);
+/* Dark mode - all colors invert */
+.dark {
+  --theme-paper: #121212;
+  --theme-stone: #1e1e1e;
+  --theme-stone-dark: #2a2a2a;
+  --theme-ink: #f0f0f0;
+  --theme-ink-soft: #a0a0a0;
+
+  /* Dark mode shadows - subtle glow effect */
+  --theme-shadow-clay:
+    4px 4px 12px rgba(0, 0, 0, 0.4),
+    -2px -2px 8px rgba(255, 255, 255, 0.05);
+  --theme-shadow-soft:
+    2px 2px 6px rgba(0, 0, 0, 0.3),
+    -1px -1px 4px rgba(255, 255, 255, 0.03);
+}
+
+/* Tailwind theme extension */
+@theme {
+  --color-paper: var(--theme-paper);
+  --color-stone: var(--theme-stone);
+  --color-stone-dark: var(--theme-stone-dark);
+  --color-ink: var(--theme-ink);
+  --color-ink-soft: var(--theme-ink-soft);
+
+  --shadow-clay: var(--theme-shadow-clay);
+  --shadow-clay-soft: var(--theme-shadow-soft);
 
   @keyframes breathe {
 
@@ -61,34 +83,7 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   iOS Safe Area Variables + Dark Mode Colors
-   ═══════════════════════════════════════════════════════════════════════ */
-
-:root {
-  --safe-area-top: env(safe-area-inset-top, 0px);
-  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
-  --safe-area-left: env(safe-area-inset-left, 0px);
-  --safe-area-right: env(safe-area-inset-right, 0px);
-
-  /* Theme colors (light mode default) */
-  --theme-paper: #F4F4F4;
-  --theme-stone: #E0E0E0;
-  --theme-stone-dark: #C4C4C4;
-  --theme-ink: #1A1A1A;
-  --theme-ink-soft: #3A3A3A;
-}
-
-/* Dark mode colors */
-.dark {
-  --theme-paper: #1a1a1a;
-  --theme-stone: #2a2a2a;
-  --theme-stone-dark: #3a3a3a;
-  --theme-ink: #f4f4f4;
-  --theme-ink-soft: #c4c4c4;
-}
-
-/* ═══════════════════════════════════════════════════════════════════════
-   BASE STYLES - Works on all devices
+   BASE STYLES
    ═══════════════════════════════════════════════════════════════════════ */
 
 html,
@@ -104,17 +99,14 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Mobile: Lock viewport for app-like feel */
+/* Mobile: Lock viewport */
 @media (max-width: 1023px) {
 
   html,
   body {
     overflow: hidden;
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    inset: 0;
     user-select: none;
     -webkit-user-select: none;
     -webkit-touch-callout: none;
@@ -123,7 +115,7 @@ body {
   }
 }
 
-/* Desktop: Allow normal scrolling */
+/* Desktop: Centered card */
 @media (min-width: 1024px) {
 
   html,
@@ -146,17 +138,22 @@ body {
   height: 100%;
   display: flex;
   flex-direction: column;
+  background-color: var(--theme-paper);
+  transition: background-color 0.3s ease;
 }
 
-/* Desktop: Constrain root width */
 @media (min-width: 1024px) {
   #root {
     max-width: 480px;
     min-height: calc(100vh - 48px);
     height: auto;
     border-radius: 24px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
     overflow: hidden;
+  }
+
+  .dark #root {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
   }
 }
 
@@ -168,7 +165,7 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   Safe Area Utilities
+   Safe Area & Scrollable
    ═══════════════════════════════════════════════════════════════════════ */
 
 .pt-safe {
@@ -184,10 +181,6 @@ body {
   padding-right: max(16px, var(--safe-area-right));
 }
 
-/* ═══════════════════════════════════════════════════════════════════════
-   Scrollable Content Area
-   ═══════════════════════════════════════════════════════════════════════ */
-
 .scrollable {
   overflow-y: auto;
   overflow-x: hidden;
@@ -196,22 +189,18 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   Utility Classes
+   Utility Classes with Dark Mode Support
    ═══════════════════════════════════════════════════════════════════════ */
 
 .clay {
-  background: var(--color-paper);
-  box-shadow: var(--shadow-clay);
+  background: var(--theme-paper);
+  box-shadow: var(--theme-shadow-clay);
   border-radius: 50%;
-  transition: box-shadow 0.3s ease;
-}
-
-.clay-pressed {
-  box-shadow: var(--shadow-clay-pressed);
+  transition: box-shadow 0.3s ease, background-color 0.3s ease;
 }
 
 .clay-soft {
-  box-shadow: var(--shadow-clay-soft);
+  box-shadow: var(--theme-shadow-soft);
 }
 
 .ripple-container {
@@ -225,16 +214,25 @@ body {
 .ripple {
   position: absolute;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(26, 26, 26, 0.08) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(128, 128, 128, 0.15) 0%, transparent 70%);
   mix-blend-mode: multiply;
   animation: ripple 0.6s ease-out forwards;
   pointer-events: none;
+}
+
+.dark .ripple {
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+  mix-blend-mode: screen;
 }
 
 .glass-overlay {
   background: rgba(244, 244, 244, 0.85);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+}
+
+.dark .glass-overlay {
+  background: rgba(18, 18, 18, 0.9);
 }
 
 .timer-font {
@@ -264,7 +262,7 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   Hide Scrollbar (mobile only)
+   Scrollbar Styles
    ═══════════════════════════════════════════════════════════════════════ */
 
 @media (max-width: 1023px) {
@@ -279,37 +277,84 @@ body {
   }
 }
 
-/* Desktop: Show thin scrollbar */
 @media (min-width: 1024px) {
   .scrollable::-webkit-scrollbar {
     width: 6px;
   }
 
   .scrollable::-webkit-scrollbar-track {
-    background: var(--color-stone);
+    background: var(--theme-stone);
     border-radius: 3px;
   }
 
   .scrollable::-webkit-scrollbar-thumb {
-    background: var(--color-stone-dark);
+    background: var(--theme-stone-dark);
     border-radius: 3px;
-  }
-
-  .scrollable::-webkit-scrollbar-thumb:hover {
-    background: var(--color-ink-soft);
   }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   Desktop Hover States
+   Component-specific dark mode overrides
    ═══════════════════════════════════════════════════════════════════════ */
 
-@media (min-width: 1024px) {
-  button:hover {
-    cursor: pointer;
-  }
+/* Ensure text visibility in both modes */
+.text-ink {
+  color: var(--theme-ink) !important;
+}
 
-  .clay:hover {
-    box-shadow: var(--shadow-clay-hover);
-  }
+.text-ink-soft {
+  color: var(--theme-ink-soft) !important;
+}
+
+.text-stone-dark {
+  color: var(--theme-stone-dark) !important;
+}
+
+.bg-paper {
+  background-color: var(--theme-paper) !important;
+}
+
+.bg-stone {
+  background-color: var(--theme-stone) !important;
+}
+
+.bg-stone-dark {
+  background-color: var(--theme-stone-dark) !important;
+}
+
+.bg-ink {
+  background-color: var(--theme-ink) !important;
+}
+
+.border-stone {
+  border-color: var(--theme-stone) !important;
+}
+
+/* Dark mode specific enhancements */
+.dark .shadow-clay-soft {
+  box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.4), -1px -1px 4px rgba(255, 255, 255, 0.02);
+}
+
+/* Text on dark ink backgrounds */
+.dark .bg-ink {
+  background-color: #f0f0f0 !important;
+}
+
+.dark .bg-ink .text-paper,
+.dark .text-paper {
+  color: #121212 !important;
+}
+
+/* Input fields in dark mode */
+.dark input,
+.dark textarea,
+.dark select {
+  background-color: var(--theme-stone) !important;
+  color: var(--theme-ink) !important;
+  border-color: var(--theme-stone-dark) !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: var(--theme-ink-soft) !important;
 }
