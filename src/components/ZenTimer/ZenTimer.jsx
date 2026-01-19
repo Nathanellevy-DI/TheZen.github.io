@@ -5,6 +5,7 @@ import { DropZone } from './DropZone';
 import { SettingsOverlay } from '../Settings/SettingsOverlay';
 import { useTimerState } from '../../hooks/useTimerState';
 import { getStorageItem, setStorageItem, validateTimerSettings } from '../../utils/storage';
+import { notifyTimerComplete, requestNotificationPermission } from '../../utils/notifications';
 
 /**
  * Quick preset durations in minutes
@@ -134,6 +135,10 @@ export function ZenTimer({ onSessionComplete, onSessionStart }) {
                 onSessionComplete(state.duration);
             }
 
+            // Show notification
+            const durationMinutes = Math.round(state.duration / 60);
+            notifyTimerComplete(durationMinutes);
+
             if (settings.soundEnabled) {
                 // Play a subtle completion tone using Web Audio API
                 try {
@@ -158,6 +163,13 @@ export function ZenTimer({ onSessionComplete, onSessionStart }) {
             }
         }
     }, [state.status, state.duration, settings.soundEnabled, onSessionComplete]);
+
+    // Request notification permission when timer starts
+    useEffect(() => {
+        if (state.status === 'running') {
+            requestNotificationPermission();
+        }
+    }, [state.status]);
 
     const currentMinutes = Math.round(state.duration / 60);
     const showPresets = state.status === 'idle';

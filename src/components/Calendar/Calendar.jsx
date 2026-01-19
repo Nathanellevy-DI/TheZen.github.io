@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Plus, X, Clock, MapPin, Video, ExternalLink, Tag } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, X, Clock, MapPin, Video, ExternalLink, Tag, Bell } from 'lucide-react';
 import { getStorageItem, setStorageItem } from '../../utils/storage';
+import { showNotification, requestNotificationPermission, getNotificationPermission } from '../../utils/notifications';
 
 function generateId() {
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
@@ -82,8 +83,59 @@ export function Calendar() {
         categoryId: 'meeting',
     });
 
+    const notifiedMeetingsRef = useRef(new Set());
+
     useEffect(() => { setStorageItem('calendar_events', events); }, [events]);
     useEffect(() => { setStorageItem('calendar_categories', categories); }, [categories]);
+
+    // Meeting reminder system - check every minute
+    useEffect(() => {
+        const checkMeetings = () => {
+            const now = new Date();
+            const todayKey = formatDateKey(now.getFullYear(), now.getMonth(), now.getDate());
+            const todayEvents = events[todayKey] || [];
+
+            todayEvents.forEach(event => {
+                if (event.type !== 'meeting' || !event.time) return;
+
+                // Parse meeting time
+                const [hours, minutes] = event.time.split(':').map(Number);
+                const meetingTime = new Date(now);
+                meetingTime.setHours(hours, minutes, 0, 0);
+
+                const diffMs = meetingTime - now;
+                const diffMins = Math.floor(diffMs / 60000);
+
+                const notifyKey = `${event.id}-${todayKey}`;
+
+                // Notify 5 minutes before
+                if (diffMins > 0 && diffMins <= 5 && !notifiedMeetingsRef.current.has(notifyKey)) {
+                    notifiedMeetingsRef.current.add(notifyKey);
+                    showNotification(`Meeting in ${diffMins} min`, {
+                        body: event.title,
+                        tag: `meeting-${event.id}`,
+                        requireInteraction: true,
+                    });
+                }
+
+                // Notify at start time
+                if (diffMins === 0 && !notifiedMeetingsRef.current.has(notifyKey + '-start')) {
+                    notifiedMeetingsRef.current.add(notifyKey + '-start');
+                    showNotification('Meeting Starting Now', {
+                        body: event.title,
+                        tag: `meeting-start-${event.id}`,
+                        requireInteraction: true,
+                    });
+                }
+            });
+        };
+
+        // Check immediately and then every minute
+        checkMeetings();
+        const interval = setInterval(checkMeetings, 60000);
+
+        return () => clearInterval(interval);
+    }, [events]);
 
     const daysInMonth = getDaysInMonth(currentYear, currentMonth);
     const firstDayOfMonth = getFirstDayOfMonth(currentYear, currentMonth);
