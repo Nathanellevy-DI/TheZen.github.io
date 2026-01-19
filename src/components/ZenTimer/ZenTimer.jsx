@@ -236,22 +236,34 @@ export function ZenTimer({ onSessionComplete, onSessionStart }) {
                 )}
                 {state.status === 'running' && (
                     <motion.div
-                        className="mt-8 text-sm text-ink-soft"
+                        className="mt-8 text-center"
                         initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 0.6, y: 0 }}
+                        animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
                     >
-                        tap to pause
+                        <p className="text-sm text-ink-soft opacity-60">tap to pause</p>
+                        <button
+                            onClick={() => actions.cancel()}
+                            className="mt-3 px-4 py-2 text-xs text-stone-dark bg-stone rounded-lg hover:bg-stone-dark hover:text-ink transition-colors"
+                        >
+                            Reset Timer
+                        </button>
                     </motion.div>
                 )}
                 {state.status === 'paused' && (
                     <motion.div
-                        className="mt-8 text-sm text-ink-soft"
+                        className="mt-8 text-center"
                         initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 0.6, y: 0 }}
+                        animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
                     >
-                        tap to resume
+                        <p className="text-sm text-ink-soft opacity-60">tap to resume</p>
+                        <button
+                            onClick={() => actions.cancel()}
+                            className="mt-3 px-4 py-2 text-xs text-stone-dark bg-stone rounded-lg hover:bg-stone-dark hover:text-ink transition-colors"
+                        >
+                            Reset Timer
+                        </button>
                     </motion.div>
                 )}
             </AnimatePresence>
